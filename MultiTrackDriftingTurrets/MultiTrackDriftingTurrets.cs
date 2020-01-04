@@ -11,14 +11,19 @@ using System.Linq;
 using System.IO;
 using R2API.Utils;
 using System.Collections.Generic;
+using Hj;
 
 namespace MultiTrackDriftingTurrets
 {
-    [BepInDependency("com.bepis.r2api")]
+    [BepInDependency(R2API.R2API.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
+    [BepInDependency(Hj.HjUpdaterAPI.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [R2APISubmoduleDependency(nameof(AssetPlus))]
-    [BepInPlugin("com.prismism.multitrackdriftingturrets", "MultiTrackDriftingTurrets", "1.0")]
+    [BepInPlugin("com.prismism.multitrackdriftingturrets", MOD_NAME, "1.1.0")]
     public class MultiTrackDriftingTurrets : BaseUnityPlugin
     {
+        public const string MOD_NAME = "MultiTrackDriftingTurrets";
+
+
         private const string BankName = "DEJAVU_Soundbank.bnk";
 
         // soundbank events:
@@ -62,9 +67,24 @@ namespace MultiTrackDriftingTurrets
 
         }
 
+        /// <summary>
+        /// Static function to contain this HjUpdaterAPI line, because
+        /// it doesn't work otherwise. Intuitive!
+        /// </summary>
+        private static void Updater()
+        {
+            Hj.HjUpdaterAPI.Register(MOD_NAME);
+        }
+
         //The Awake() method is run at the very start when the game is initialized.
         public void Awake()
         {
+            // Optional auto-update functionality
+            if (BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(Hj.HjUpdaterAPI.GUID))
+            {
+                Updater();
+            }
+
             //  Register the DEJA VU sample, and the events that allow us to control when it plays
             AddSoundBank();
 

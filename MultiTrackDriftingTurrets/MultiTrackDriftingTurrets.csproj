@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -18,6 +18,9 @@
     <Reference Include="Facepunch.Steamworks">
       <HintPath>..\libs\Facepunch.Steamworks.dll</HintPath>
     </Reference>
+    <Reference Include="HjUpdaterAPI">
+      <HintPath>..\libs\HjUpdaterAPI.dll</HintPath>
+    </Reference>
     <Reference Include="KdTreeLib">
       <HintPath>..\libs\KdTreeLib.dll</HintPath>
     </Reference>
@@ -32,6 +35,9 @@
     </Reference>
     <Reference Include="MonoMod.Utils">
       <HintPath>..\libs\MonoMod.Utils.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\libs\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="pb_Stl">
       <HintPath>..\libs\pb_Stl.dll</HintPath>

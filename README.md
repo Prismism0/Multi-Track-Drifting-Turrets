@@ -16,4 +16,20 @@ Demo video (youtube):
 
 ***
 
+This plugin can utilize [HjUpdaterAPI](https://thunderstore.io/package/Lodington/HjUpdaterAPI/) for automatic updates!
+
+***
+
+###Changelog:
+
+    - 1.1.0 (Latest)
+        - Added optional support for HjUpdaterAPI
+
+    - 1.0.2
+        - Updated readme with video demonstration
+    - 1.0.1
+        - Fixed readme
+    - 1.0.0
+        - Release
+
 ###### *Many turrets were harmed in the making of this plugin.

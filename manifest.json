@@ -1,6 +1,6 @@
 {
     "name": "MultiTrackDriftingTurrets",
-    "version_number": "1.0.1",
+    "version_number": "1.1.0",
     "website_url": "https://github.com/Prismism0/Multi-Track-Drifting-Turrets",
     "description": "Wish your mobile engineer turrets made you painfully aware of how hard they are drifting? Well now they will!",
     "dependencies": [
