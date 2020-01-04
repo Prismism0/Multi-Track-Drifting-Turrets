@@ -1,0 +1,10 @@
+{
+    "name": "MultiTrackDriftingTurrets",
+    "version_number": "1.0",
+    "website_url": "https://github.com/Prismism0/Multi-Track-Drifting-Turrets",
+    "description": "Wish your mobile engineer turrets made you painfully aware of how hard they are drifting? Well now they will!",
+    "dependencies": [
+        "bbepis-BepInExPack-3.0.0",
+        "tristanmcpherson-R2API-2.3.7"
+    ]
+}
