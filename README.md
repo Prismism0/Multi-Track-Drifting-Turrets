@@ -20,7 +20,7 @@ This plugin can utilize [HjUpdaterAPI](https://thunderstore.io/package/Lodington
 
 ***
 
-###Changelog:
+### Changelog:
 
     - 1.1.0 (Latest)
         - Added optional support for HjUpdaterAPI
