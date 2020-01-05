@@ -2,7 +2,7 @@
 ![](https://lh3.googleusercontent.com/y8Npiiv31MbN2NiBdtXcerqDe0-SC6EZXwgrgppFSjg-sBxncvL7qd_mOT1LhV2xenDFez0=s85)
  
 ### NOTE:
-This plugin currently only works in  single-player. **When in multiplayer, only the HOST will hear any music** (doesn't matter who is playing Engineer).
+This plugin is a client-side plugin. **When in multiplayer, only players that have this plugin will hear the music.** (doesn't matter who is playing Engineer).
 
 
 ## What this plugin does
@@ -22,7 +22,10 @@ This plugin can utilize [HjUpdaterAPI](https://thunderstore.io/package/Lodington
 
 ### Changelog:
 
-    - 1.1.0 (Latest)
+    - 2.0.0  (Latest)
+        - Reworked plugin from server-side to client-side, meaning that any player can enjoy it without the host needing to have it.
+
+    - 1.1.0
         - Added optional support for HjUpdaterAPI
 
     - 1.0.2

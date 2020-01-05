@@ -18,7 +18,7 @@ namespace MultiTrackDriftingTurrets
     [BepInDependency(R2API.R2API.PluginGUID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(Hj.HjUpdaterAPI.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [R2APISubmoduleDependency(nameof(AssetPlus))]
-    [BepInPlugin("com.prismism.multitrackdriftingturrets", MOD_NAME, "1.1.0")]
+    [BepInPlugin("com.prismism.multitrackdriftingturrets", MOD_NAME, "2.0.0")]
     public class MultiTrackDriftingTurrets : BaseUnityPlugin
     {
         public const string MOD_NAME = "MultiTrackDriftingTurrets";
@@ -37,7 +37,7 @@ namespace MultiTrackDriftingTurrets
         // Used to resume a single music instance on a gameobject
         private const uint DEJA_VU_TIME_CONTINUES = 1519326796;
 
-        private static List<Tuple<GameObject, TurretStatus>> EngiTurretsToTrack = new List<Tuple<GameObject, TurretStatus>>();
+        private static List<TurretStatus> EngiTurretsToTrack = new List<TurretStatus>();
 
         public static void AddSoundBank()
         {
@@ -88,41 +88,40 @@ namespace MultiTrackDriftingTurrets
             //  Register the DEJA VU sample, and the events that allow us to control when it plays
             AddSoundBank();
 
-            // Inject some logic into HandleConstructTurret which will register
-            // each turret created into the 'EngiTurretsToTrack' collection 
-            IL.RoR2.CharacterBody.HandleConstructTurret += (il) =>
-            {
-                ILCursor c = new ILCursor(il);
-                c.GotoNext(
-                    x => x.MatchLdcI4(0x56),
-                    x => x.MatchCallvirt<Inventory>("ResetItem")
-                );
-                c.Index += 4;
-
-                c.Emit(OpCodes.Ldloc_3);
-                c.EmitDelegate<Action<CharacterMaster>>((charMaster) =>
-                {
-                    if(charMaster != null && charMaster.inventory != null)
-                    {
-                        var inv = charMaster.inventory;
-                        GameObject soundSource = charMaster.GetBody().gameObject;
-
-                        if (charMaster.gameObject != null)
-                        {
-                            // "Start" the music. We expect it to be promptly paused since
-                            // the turret is stationary when it spawns. We need to call 'start'
-                            // at some point and this is as good as any.
-                            AkSoundEngine.PostEvent(DEJA_VU_TIME, soundSource);
-
-                            // Register this new turret with the plugin (for processing in the plugin's update function)
-                            EngiTurretsToTrack.Add(new Tuple<GameObject, TurretStatus>(soundSource, new TurretStatus(inv.GetItemCount(ItemIndex.Hoof), true)));
-                            //Debug.Log($"Tracking {EngiTurretsToTrack.Count} turrets");
-                        }
-                    }
-                });
-            };
-
             On.RoR2.Stage.Start += Stage_Start;
+
+            On.EntityStates.Turret1.SpawnState.OnEnter += SpawnState_OnEnter;
+
+            // UNCOMMENT THIS FOR MULTIPLAYER TESTING USING SEVERAL LOCAL GAME INSTANCES
+            //On.RoR2.Networking.GameNetworkManager.OnClientConnect += GameNetworkManager_OnClientConnect1;
+        }
+
+        // UNCOMMENT THIS FOR MULTIPLAYER TESTING USING SEVERAL LOCAL GAME INSTANCES
+        //private void GameNetworkManager_OnClientConnect1(On.RoR2.Networking.GameNetworkManager.orig_OnClientConnect orig, RoR2.Networking.GameNetworkManager self, UnityEngine.Networking.NetworkConnection conn)
+        //{
+        //    // Do nothing
+        //}
+
+        // EXPERIMENTAL
+        private void SpawnState_OnEnter(On.EntityStates.Turret1.SpawnState.orig_OnEnter orig, EntityStates.Turret1.SpawnState self)
+        {
+            orig(self);
+
+            // Get the number of goat-hooves
+            // Retrieve it from the inventory of the engineer that spawned the turret
+            // because clients do not track inventory for the turret itself (server only)
+            // but they do track player inventories.
+            var body = self.outer.GetComponent<CharacterBody>();
+            var inventory = body.master.minionOwnership.ownerMaster.inventory;
+
+            int hooves = inventory.GetItemCount(ItemIndex.Hoof);
+
+            // "Start" the music, though we expect it to be immediately paused
+            // since the turret is stationary when it spawns.
+            AkSoundEngine.PostEvent(DEJA_VU_TIME, self.outer.gameObject);
+
+            // Register the turret to be tracked by the plugin
+            EngiTurretsToTrack.Add(new TurretStatus(self.outer.gameObject, hooves, true));
         }
 
         // I noticed that going between stages (especially when looping back
@@ -135,35 +134,24 @@ namespace MultiTrackDriftingTurrets
             AkSoundEngine.PostEvent(DEJA_VU_TIME_STOPS, null);
         }
 
-        public void Update()
+        public void FixedUpdate()
         {
             // To avoid trying to remove while iterating through our list
-            List<Tuple<GameObject, TurretStatus>> toRemove = new List<Tuple<GameObject, TurretStatus>>();
+            List<TurretStatus> toRemove = new List<TurretStatus>();
 
             // I don't know 100% if this is needed, but I started getting
             // fewer errors with it in.
-            int preRemoved = EngiTurretsToTrack.RemoveAll((tuple) => tuple.Item1 == null);
+            int preRemoved = EngiTurretsToTrack.RemoveAll((status) => status.TurretGameObject == null);
 
-            foreach(var tuple in EngiTurretsToTrack)
+            foreach (var status in EngiTurretsToTrack)
             {
-                if (tuple.Item1 is null || !tuple.Item1.activeInHierarchy)
+                if (status.TurretGameObject is null || !status.TurretGameObject.activeInHierarchy)
                 {
-                    toRemove.Add(tuple);
+                    toRemove.Add(status);
                     continue;
                 }
 
-                // Get how fast the turret is moving right now
-                float speed;
-                var body = tuple.Item1.GetComponent<Rigidbody>();
-                if(body != null)
-                {
-                    speed = body.velocity.magnitude;
-                }
-                else
-                {
-                    toRemove.Add(tuple);
-                    continue;
-                }
+                float speed = status.Speed;
 
                 // Set the volume of the music to change depending on current speed
                 // Formula is this:
@@ -177,44 +165,26 @@ namespace MultiTrackDriftingTurrets
                 //
                 //      After some tweaking, I ended up preferring a mix of additive and multiplicitave scaling.
                 //      The -1 at the end helps increase the number of speedItems you need before you hear anything.
-                float newVolumeModifier = tuple.Item2.NumSpeedItems * 0.25f + speed / 20 + ( (float)Math.Sqrt(tuple.Item2.NumSpeedItems) * speed / 22) - 1;
-                RtpcSetter gameParamSetter = new RtpcSetter("Speeds", tuple.Item1) { value = newVolumeModifier };
+                float newVolumeModifier = status.NumSpeedItems * 0.25f + speed / 20 + ((float)Math.Sqrt(status.NumSpeedItems) * speed / 22) - 1;
+                RtpcSetter gameParamSetter = new RtpcSetter("Speeds", status.TurretGameObject) { value = newVolumeModifier };
                 gameParamSetter.FlushIfChanged();
 
-                if(speed <= 0.0001 && tuple.Item2.MusicPlaying)
+                if (speed <= 0.0001 && status.MusicPlaying)
                 {
                     // If it's NOT moving and the music IS playing, then PAUSE
-                    tuple.Item2.MusicPlaying = false;
-                    AkSoundEngine.PostEvent(DEJA_VU_TIME_PAUSES, tuple.Item1);
+                    status.MusicPlaying = false;
+                    AkSoundEngine.PostEvent(DEJA_VU_TIME_PAUSES, status.TurretGameObject);
                 }
-                else if(speed > 0.0001 && !tuple.Item2.MusicPlaying)
+                else if (speed > 0.0001 && !status.MusicPlaying)
                 {
                     // If it IS moving and the music is NOT playing, then RESUME
-                    tuple.Item2.MusicPlaying = true;
-                    AkSoundEngine.PostEvent(DEJA_VU_TIME_CONTINUES, tuple.Item1);
+                    status.MusicPlaying = true;
+                    AkSoundEngine.PostEvent(DEJA_VU_TIME_CONTINUES, status.TurretGameObject);
                 }
-                    
-            }
 
-            foreach (var obj in toRemove)
-            {
-                EngiTurretsToTrack.Remove(obj);
+                // The last thing we want to do, prep for next update
+                status.RecordLastPosition();
             }
-
-            // Uncomment for DEBUG purposes
-            /*
-            if (toRemove.Any() || preRemoved > 0)
-            {
-                if (EngiTurretsToTrack.Any())
-                {
-                    Debug.Log($"Removed {toRemove.Count + preRemoved} things, and dictionary is NOT empty");
-                }
-                else
-                {
-                    Debug.Log($"Removed {toRemove.Count + preRemoved} things, and dictionary IS empty");
-                }
-            }
-            */
         }
     }
 
@@ -224,13 +194,39 @@ namespace MultiTrackDriftingTurrets
     /// </summary>
     public class TurretStatus
     {
+        public GameObject TurretGameObject { get; set; }
         public int NumSpeedItems { get; set; }
         public bool MusicPlaying { get; set; }
 
-        public TurretStatus(int numSpeedItems, bool musicPlaying)
+        private Vector3 LastPosition { get; set; }
+
+        public float Speed
         {
+            get
+            {
+                if(LastPosition != null && TurretGameObject != null)
+                {
+                    Vector3 diff = TurretGameObject.transform.position - LastPosition;
+                    return diff.magnitude / Time.fixedDeltaTime;
+                }
+
+                return 0;
+            }
+        }
+
+        public TurretStatus(GameObject gameObj, int numSpeedItems, bool musicPlaying)
+        {
+            TurretGameObject = gameObj;
             NumSpeedItems = numSpeedItems;
             MusicPlaying = musicPlaying;
+        }
+
+        public void RecordLastPosition()
+        {
+            if(TurretGameObject != null)
+            {
+                LastPosition = TurretGameObject.transform.position;
+            }
         }
     }
 
