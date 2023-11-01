@@ -16,13 +16,11 @@ Demo video (youtube):
 
 ***
 
-This plugin can utilize [HjUpdaterAPI](https://thunderstore.io/package/Lodington/HjUpdaterAPI/) for automatic updates!
-
-***
-
 ### Changelog:
 
-    - 2.0.0  (Latest)
+	- 3.0.0  (Latest)
+		- Updated for new modding framework
+    - 2.0.0
         - Reworked plugin from server-side to client-side, meaning that any player can enjoy it without the host needing to have it.
 
     - 1.1.0
